@@ -56,7 +56,7 @@ async function handleProfileRequest(req, res) {
 
 app.get("/api/v1/profile", handleProfileRequest);
 
-app.get("/health", (_req, res) => {
+app.head("/health", (_req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
