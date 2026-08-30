@@ -13,7 +13,8 @@ app.use(express.json({ limit: "2mb" }));
 async function handleProfileRequest(req, res) {
   const profileUrl = req.body?.profile_url || req.query?.profile_url;
   const cookie = req.body?.cookie || req.query?.cookie || null;
-  const extractionMode = req.body?.extraction_mode || req.query?.extraction_mode || "llm";
+  const extractionMode =
+    req.body?.extraction_mode || req.query?.extraction_mode || "llm";
 
   if (!profileUrl || !String(profileUrl).includes("linkedin.com/in/")) {
     return res.status(400).json({
@@ -56,23 +57,30 @@ async function handleProfileRequest(req, res) {
 app.get("/api/v1/profile", handleProfileRequest);
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 function startServer(port) {
-  const server = app.listen(port, () => {
-    console.log(`WeLink running on http://localhost:${port}`);
+  const server = app.listen(port, "0.0.0.0", () => {
+    console.log(`WeLink running on http://0.0.0.0:${port}`);
   });
+
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
       console.warn(`Port ${port} in use, trying ${port + 1}`);
       startServer(port + 1);
       return;
     }
+
     throw error;
   });
 }
 
-if (require.main === module) startServer(DEFAULT_PORT);
+if (require.main === module) {
+  startServer(DEFAULT_PORT);
+}
 
 module.exports = app;
