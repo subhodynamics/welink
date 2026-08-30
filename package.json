@@ -1,0 +1,35 @@
+{
+  "name": "welink",
+  "version": "1.0.0",
+  "description": "LinkedIn profile scraper API in Node.js",
+  "keywords": [
+    "linkedin",
+    "scraper",
+    "api"
+  ],
+  "homepage": "https://github.com/subhodynamics/welink#readme",
+  "bugs": {
+    "url": "https://github.com/subhodynamics/welink/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/subhodynamics/welink.git"
+  },
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "main": "app/server.js",
+  "scripts": {
+    "start": "node app/server.js",
+    "dev": "node --watch app/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {}
+}
