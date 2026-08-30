@@ -10,7 +10,7 @@ function buildFailure(profileUrl, message) {
   });
 }
 
-async function scrapeLinkedInProfile(profileUrl, cookieStr = null, mode = "llm") {
+async function scrapeLinkedInProfile(profileUrl, cookieStr, mode = "llm") {
   const headers = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   "accept-language": "en-US,en;q=0.9",
@@ -24,6 +24,7 @@ async function scrapeLinkedInProfile(profileUrl, cookieStr = null, mode = "llm")
   "sec-fetch-mode": "navigate",
   "sec-fetch-site": "cross-site",
   "sec-fetch-user": "?1",
+  cookieStr,
   "upgrade-insecure-requests": "1",
   "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0",
 };
