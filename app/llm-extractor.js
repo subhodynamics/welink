@@ -1,6 +1,7 @@
 const OpenAI = require("openai");
 const cheerio = require("cheerio");
 const { Experience, Education, ProfileResponse } = require("./schema");
+const { buildLinkedInExtractionPrompt } = require("./prompt");
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 // Changed to a valid, high-performance Groq model
@@ -25,6 +26,67 @@ function parseJsonResponse(output) {
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end < start) throw new Error("The model did not return a JSON object.");
   return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+function validateLinkedInProfileData(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("LLM response must be a JSON object matching the supported schema.");
+  }
+
+  const validateStringOrNull = (value, fieldName) => {
+    if (value === null || value === undefined) return;
+    if (typeof value !== "string") {
+      throw new Error(`Field "${fieldName}" must be a string or null.`);
+    }
+  };
+
+  const validateStringArray = (value, fieldName) => {
+    if (value === undefined || value === null) return;
+    if (!Array.isArray(value)) {
+      throw new Error(`Field "${fieldName}" must be an array.`);
+    }
+    for (const item of value) {
+      if (typeof item !== "string") {
+        throw new Error(`Field "${fieldName}" must contain only strings.`);
+      }
+    }
+  };
+
+  ["name", "headline", "location", "about", "profile_image_url"].forEach((field) => {
+    validateStringOrNull(data[field], field);
+  });
+
+  if (data.experience !== undefined && data.experience !== null) {
+    if (!Array.isArray(data.experience)) {
+      throw new Error('Field "experience" must be an array.');
+    }
+    for (const item of data.experience) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error('Each experience item must be an object.');
+      }
+      ["title", "company", "location", "duration", "description"].forEach((field) => {
+        validateStringOrNull(item[field], field);
+      });
+    }
+  }
+
+  if (data.education !== undefined && data.education !== null) {
+    if (!Array.isArray(data.education)) {
+      throw new Error('Field "education" must be an array.');
+    }
+    for (const item of data.education) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error('Each education item must be an object.');
+      }
+      ["school", "degree", "duration"].forEach((field) => {
+        validateStringOrNull(item[field], field);
+      });
+    }
+  }
+
+  validateStringArray(data.skills, "skills");
+  validateStringArray(data.certifications, "certifications");
+  validateStringArray(data.languages, "languages");
 }
 
 function asString(value) { return typeof value === "string" && value.trim() ? value.trim() : null; }
@@ -58,17 +120,7 @@ async function extractLinkedInProfileWithLlm(html, profileUrl, client = getGroqC
   const imgMatch = html.match(/https:\/\/media\.licdn\.com\/dms\/image\/[^"'\s]+profile-displayphoto[^"'\s]*/);
   const profileImageUrl = imgMatch ? imgMatch[0].replace(/&amp;/g, "&") : null;
 
-  const prompt = `Extract the LinkedIn profile from the page text below. Return ONLY a valid JSON object, with exactly these fields:
-{
-  "name": "string or null", "headline": "string or null", "location": "string or null",
-  "about": "string or null", "profile_image_url": "string or null",
-  "experience": [{"title": "string or null", "company": "string or null", "location": "string or null", "duration": "string or null", "description": "string or null"}],
-  "education": [{"school": "string or null", "degree": "string or null", "duration": "string or null"}],
-  "skills": ["string"], "certifications": ["string"], "languages": ["string"]
-}
-Use only information explicitly present. Do not infer. Use null or [] for missing values. Ignore navigation, login prompts, and ads.
-
-LinkedIn page text:\n${pageText}`;
+  const prompt = buildLinkedInExtractionPrompt(pageText);
 
   // 1. Use chat.completions.create (Groq does not support the Responses API)
   const response = await client.chat.completions.create({
@@ -81,7 +133,8 @@ LinkedIn page text:\n${pageText}`;
   // 2. Parse response.choices[0].message.content
   const rawContent = response.choices[0].message.content;
   const parsedData = parseJsonResponse(rawContent);
-  
+  validateLinkedInProfileData(parsedData);
+
   // Inject the image URL we saved from the raw HTML
   if (!parsedData.profile_image_url && profileImageUrl) {
     parsedData.profile_image_url = profileImageUrl;
@@ -90,4 +143,11 @@ LinkedIn page text:\n${pageText}`;
   return mapLlmProfile(parsedData, profileUrl);
 }
 
-module.exports = { DEFAULT_MODEL, extractLinkedInProfileWithLlm, mapLlmProfile, pageToText, parseJsonResponse };
+module.exports = {
+  DEFAULT_MODEL,
+  extractLinkedInProfileWithLlm,
+  mapLlmProfile,
+  pageToText,
+  parseJsonResponse,
+  validateLinkedInProfileData,
+};
