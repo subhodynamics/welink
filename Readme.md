@@ -1,4 +1,4 @@
-# LinkedIn Profile Extraction API
+# WeLink - LinkedIn Profile Extraction API
 
 A lightweight REST API that fetches LinkedIn profile pages and converts the returned HTML into structured profile data.
 
